@@ -47,3 +47,5 @@ Once the login page comes up:
 User name: admin
 
 Password: admin
+
+Congratulations you've successfully setup Lenses Community Edition. 
