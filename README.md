@@ -45,4 +45,5 @@ Once the login page comes up:
 ![screenshot of Community Edition login page](/images/login_page.png)
 
 User name: admin
+
 Password: admin
