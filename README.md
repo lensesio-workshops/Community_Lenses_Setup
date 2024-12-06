@@ -42,7 +42,7 @@ Lenses Community edition user interface runs on port 9991. To login just point y
 
 Once the login page comes up:
 
-![screenshot of Community Edition login page](/images/login_page)
+![screenshot of Community Edition login page](/images/login_page.png)
 
 User name: admin
 Password: admin
