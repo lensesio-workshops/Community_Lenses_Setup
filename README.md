@@ -14,4 +14,24 @@ Once you've downloaded the file run this command to start up Lenses Community Ed
 
 `ACCEPT_EULA=true docker compose up`
 
-You need to add the `ACCEPT_EULA` statment to enable the community license. The very first time you run this command it will take a few moments longer than usual because Docker has to download all the container images needed to run the various components. Once it's all up and running it should look like this in Docker Desktop
+You need to add the `ACCEPT_EULA` statment to enable the community license. The very first time you run this command it will take a few moments longer than usual because Docker has to download all the container images needed to run the various components. Once it's all up and running it should look like this in Docker Desktop:
+
+![screenshot of Docker Desktop with Lenses Community Edition running](/images/docker_desktop.png)
+
+Or from the command line: 
+
+![screenshot of Docker PS command output](/images/docker_ps.png)
+
+When you are finished you can bring it all down with the following command:
+
+`docker compose down` Don't worry about the warning about the EULA it's harmless. 
+
+## What's In the Community Dcoker Compose Package?
+
+A fully functional single node Apache Kafka cluster, a Schema Registry, and a Kafka Connect instance.
+
+An instance of Lenses HQ - the control plane of Lenses 6. 
+
+An instance of Lenses Agent - the agent that runs adjacet to your Kafka instances in Lenses 6
+
+A datagenerator that makes sure there is snythetic data in your Kafka cluster for demonstration purposes. 
