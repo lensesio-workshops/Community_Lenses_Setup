@@ -24,7 +24,7 @@ Or from the command line:
 
 When you are finished you can bring it all down with the following command:
 
-`docker compose down` Don't worry about the warning regarding the EULA it's harmless. 
+`docker compose down` Don't worry about the warning regarding the EULA; it's harmless. 
 
 ## What's In the Community Dcoker Compose Package?
 
