@@ -8,7 +8,7 @@ You will need a laptop or a VM with at least 8 gigs of memory and the ability to
 
 ## Obtaining and Running the Docker Compose File
 
-You can download the Docker compose file here: (https://lenses.io/preview). 
+You can download the Docker compose file here: https://lenses.io/preview 
 
 Once you've downloaded the file run this command to start up Lenses Community Edition:
 
@@ -28,10 +28,21 @@ When you are finished you can bring it all down with the following command:
 
 ## What's In the Community Dcoker Compose Package?
 
-A fully functional single node Apache Kafka cluster, a Schema Registry, and a Kafka Connect instance.
+A fully functional single node Apache Kafka cluster, Schema Registry, and  Kafka Connect instance. All of these are running in a single container.
 
 An instance of Lenses HQ - the control plane of Lenses 6. 
 
-An instance of Lenses Agent - the agent that runs adjacet to your Kafka instances in Lenses 6
+An instance of Lenses Agent - the agent that runs adjacet to your Kafka instances in Lenses 6. [See Lenses docs for details.](https://docs.lenses.io/latest)
 
 A datagenerator that makes sure there is snythetic data in your Kafka cluster for demonstration purposes. 
+
+## Connecting to Lenses Community Edition
+
+Lenses Community edition user interface runs on port 9991. To login just point your browser to `http://localhost:9991` if you're on your laptop. Or `http://{your VM's IP address}:9991` if you're running this on a VM. 
+
+Once the login page comes up:
+
+![screenshot of Community Edition login page](/images/login_page)
+
+User name: admin
+Password: admin
