@@ -8,7 +8,7 @@ You will need a laptop or a VM with at least 8 gigs of memory and the ability to
 
 ## Obtaining and Running the Docker Compose File
 
-You can download the Docker compose file here: https://lenses.io/preview 
+You can download the Docker compose file here: https://lenses.io/apache-kafka-docker/
 
 Once you've downloaded the file run this command to start up Lenses Community Edition:
 
