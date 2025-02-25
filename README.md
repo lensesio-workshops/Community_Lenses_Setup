@@ -14,7 +14,11 @@ Once you've downloaded the file run this command to start up Lenses Community Ed
 
 `ACCEPT_EULA=true docker compose up`
 
-You need to add the `ACCEPT_EULA` statement to enable the community license. The very first time you run this command it will take a few moments longer than usual because Docker has to download all the container images needed to run the various components. Once it's all up and running it should look like this in Docker Desktop:
+You need to add the `ACCEPT_EULA` statement to enable the community license. The very first time you run this command it will take a few moments longer than usual because Docker has to download all the container images needed to run the various components. 
+
+First time run will take about 3m30s all the way up to 5 minutes depending on your internet connection as well the overall speed and resouces of your docker system. After this initial download subsquent runs of `ACCEPT_EULA=true docker compose up` should only take up to 1m30s. 
+
+Once it's all up and running it should look like this in Docker Desktop:
 
 ![screenshot of Docker Desktop with Lenses Community Edition running](/images/docker_desktop.png)
 
