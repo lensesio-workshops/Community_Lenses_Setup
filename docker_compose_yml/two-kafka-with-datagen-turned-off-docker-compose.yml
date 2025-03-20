@@ -1,0 +1,316 @@
+name: lenses-6-preview
+
+# This docker compose offers a preview of the upcoming Lenses 6 release (Panoptes).
+# You can start it like this:
+#     ACCEPT_EULA=true docker compose up
+#
+# To enable persistence, uncomment the data volumes for PostgreSQL and demo Kafka.
+# To clean up persistent data, run 'docker compose down -v'.
+
+services:
+  # HQ is the control plane of Lenses and where users connect
+  lenses-hq:
+    image: lensting/lenses-hq:6-preview
+    command: /app/config.yaml
+    ports:
+      - 9991:9991
+    depends_on:
+      postgres:
+        condition: service_healthy
+      create-configs:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "lenses-hq", "is-up", "lenses-hq:9991"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    volumes:
+      # Used for configuration files created by 'create-configs' service
+      - lenses-hq-volume:/app
+
+  # Agents run alongside each Kafka cluster and provide viewing, management,
+  # alerting, and querying capabilities.
+  lenses-agent-1:
+    image: lensting/lenses-agent:6-preview
+    environment:
+      # These settings are only for demoing, so that the agent can register itself to the HQ.
+      # Normally you would get a key by visiting HQ or running:
+      #   docker run --rm -it --network lenses lensting/lenses-cli:6-preview \
+      #     -a "$DEMO_HQ_URL" -u "$DEMO_HQ_USER" -p "$DEMO_HQ_PASSWORD" \
+      #     environments create --tier development --name "[DEMO ENV NAME]"
+      # Never share your HQ credentials with the Agent in production!
+      DEMO_HQ_URL: http://lenses-hq:9991
+      DEMO_HQ_USER: admin
+      DEMO_HQ_PASSWORD: admin
+      DEMO_AGENTKEY_PATH: /mnt/settings/DEMO_AGENTKEY
+      DEMO_HQ_ENV_NAME: first
+      # Limit memory for demo setup
+      LENSES_HEAP_OPTS: -Xmx1536m -Xms512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      lenses-hq:
+        condition: service_healthy
+      create-configs:
+        condition: service_completed_successfully
+    volumes:
+      # Used for configuration files created by 'create-configs' service
+      - lenses-agent-volume:/mnt/settings
+
+  lenses-agent-2:
+    image: lensting/lenses-agent:6-preview
+    environment:
+      # These settings are only for demoing, so that the agent can register itself to the HQ.
+      # Normally you would get a key by visiting HQ or running:
+      #   docker run --rm -it --network lenses lensting/lenses-cli:6-preview \
+      #     -a "$DEMO_HQ_URL" -u "$DEMO_HQ_USER" -p "$DEMO_HQ_PASSWORD" \
+      #     environments create --tier development --name "[DEMO ENV NAME]"
+      # Never share your HQ credentials with the Agent in production!
+      DEMO_HQ_URL: http://lenses-hq:9991
+      DEMO_HQ_USER: admin
+      DEMO_HQ_PASSWORD: admin
+      DEMO_AGENTKEY_PATH: /mnt/settings/DEMO_AGENTKEY
+      DEMO_HQ_ENV_NAME: second
+      # Limit memory for demo setup
+      LENSES_HEAP_OPTS: -Xmx1536m -Xms512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      lenses-hq:
+        condition: service_healthy
+      create-configs:
+        condition: service_completed_successfully
+    volumes:
+      # Used for configuration files created by 'create-configs' service
+      - lenses-agent2-volume:/mnt/settings
+  # PostgreSQL is required for both HQ and Agents to store their configuration
+  # and data.
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: lenses
+      POSTGRES_PASSWORD: lenses
+    depends_on:
+      create-configs:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lenses"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      # Used for configuration files created by 'create-configs' service
+      - postgres-volume:/docker-entrypoint-initdb.d
+      # Optional, to allow to resume work (persistence)
+      # - postgres-data-volume:/var/lib/postgresql/data
+
+  # Our demo Kafka image includes a Broker, Schema Registry, Kafka Connect with
+  # our Connectors, and data generators. A combination of any Kafka, Registry,
+  # and Connect containers can be plugged in if you want to work with your
+  # favourite stack. Just update the 'provisioning.yaml' section to reflect the
+  # new connections.
+  demo-kafka:
+    image: lensesio/fast-data-dev
+    hostname: kafka-demo
+    environment:
+      ADV_HOST: kafka-demo
+      RUNNING_SAMPLEDATA: 0
+      # Makes things a little lighter
+      DISABLE: couchbase,debezium-mongodb,debezium-mysql,debezium-postgres,debezium-sqlserver,elasticsearch,hdfs,jdbc,splunk,twitter
+    # Optional, to allow to resume work (persistence)
+    # volumes:
+    #   - kafka-data-volume:/data
+  demo-kafka-2:
+    image: lensesio/fast-data-dev
+    hostname: kafka-demo-2
+    environment:
+      ADV_HOST: kafka-demo-2
+      RUNNING_SAMPLEDATA: 0
+      # Makes things a little lighter
+      DISABLE: couchbase,debezium-mongodb,debezium-mysql,debezium-postgres,debezium-sqlserver,elasticsearch,hdfs,jdbc,splunk,twitter
+    # Optional, to allow to resume work (persistence)
+    # volumes:
+    #   - kafka2-data-volume:/data
+
+  # This service creates the required configuration files for Lenses HQ, Agent,
+  # and PostgreSQL and exits.
+  create-configs:
+    image: busybox
+    command: >
+      sh -c '
+        printenv hq.config.yaml > /hq/config.yaml;
+        printenv agent.lenses.conf > /agent/lenses.conf;
+        printenv agent.provisioning.yaml > /agent/provisioning.yaml;
+        printenv agent2.lenses.conf > /agent2/lenses.conf;
+        printenv agent2.provisioning.yaml > /agent2/provisioning.yaml;
+        printenv postgres.init.sql > /postgres/init.sql
+      '
+    environment:
+      hq.config.yaml: |
+        http:
+          address: :9991
+        auth:
+          administrators:
+            - admin
+          users:
+           - username: admin
+             # Password is admin
+             password: $$2a$$10$$DPQYpxj4Y2iTWeuF1n.ItewXnbYXh5/E9lQwDJ/cI/.gBboW2Hodm
+        agents:
+          address: :10000
+        database:
+          host: postgres:5432
+          username: lenses
+          password: lenses
+          database: hq
+        logger:
+          mode: text
+        license:
+          # Community license key
+          key: license_key_2SFZ0BesCNu6NFv0-EOSIvY22ChSzNWXa5nSds2l4z3y7aBgRPKCVnaeMlS57hHNVboR2kKaQ8Mtv1LFt0MPBBACGhDT5If8PmTraUM5xXLz4MYv
+          # EULA can be found at https://lenses.io/legals/eula
+          acceptEULA: ${ACCEPT_EULA}
+      agent.lenses.conf: |
+        lenses.storage.postgres.host="postgres"
+        lenses.storage.postgres.port=5432
+        lenses.storage.postgres.database=agent1
+        lenses.storage.postgres.username=lenses
+        lenses.storage.postgres.password=lenses
+        lenses.provisioning.path="/mnt/settings"
+        lenses.sql.state.dir="/data/lsql-state-dir"
+        lenses.secret.file="/data/security.conf"
+        lenses.storage.directory="/data/lenses"
+      agent2.lenses.conf: |
+        lenses.storage.postgres.host="postgres"
+        lenses.storage.postgres.port=5432
+        lenses.storage.postgres.database=agent2
+        lenses.storage.postgres.username=lenses
+        lenses.storage.postgres.password=lenses
+        lenses.provisioning.path="/mnt/settings"
+        lenses.sql.state.dir="/data/lsql-state-dir"
+        lenses.secret.file="/data/security.conf"
+        lenses.storage.directory="/data/lenses"
+      agent.provisioning.yaml: |
+        lensesHq:
+          - configuration:
+              agentKey:
+                value: $${LENSESHQ_AGENT_KEY}
+              port:
+                value: 10000
+              server:
+                value: lenses-hq
+            name: lenses-hq
+            tags: ['hq']
+            version: 1
+        kafka:
+          - name: kafka
+            version: 1
+            tags: [ 'kafka', 'dev' ]
+            configuration:
+              metricsType:
+                value: JMX
+              metricsPort:
+                value: 9581
+              kafkaBootstrapServers:
+                value: [PLAINTEXT://demo-kafka:9092]
+              protocol:
+                value: PLAINTEXT
+        confluentSchemaRegistry:
+          - name: schema-registry
+            version: 1
+            tags: [ 'dev' ]
+            configuration:
+              schemaRegistryUrls:
+                value: [http://demo-kafka:8081]
+              metricsType:
+                value: JMX
+              metricsPort:
+                value: 9582
+        connect:
+          - name: dev
+            version: 1
+            tags: [ 'dev' ]
+            configuration:
+              workers:
+                value: [http://demo-kafka:8083]
+              aes256Key:
+                value: 0123456789abcdef0123456789abcdef
+              metricsType:
+                value: JMX
+              metricsPort:
+                value: 9584
+      agent2.provisioning.yaml: |
+        lensesHq:
+          - configuration:
+              agentKey:
+                value: $${LENSESHQ_AGENT_KEY}
+              port:
+                value: 10000
+              server:
+                value: lenses-hq
+            name: lenses-hq
+            tags: ['hq']
+            version: 1
+        kafka:
+          - name: kafka
+            version: 1
+            tags: [ 'kafka', 'dev' ]
+            configuration:
+              metricsType:
+                value: JMX
+              metricsPort:
+                value: 9581
+              kafkaBootstrapServers:
+                value: [PLAINTEXT://demo-kafka-2:9092]
+              protocol:
+                value: PLAINTEXT
+        confluentSchemaRegistry:
+          - name: schema-registry
+            version: 1
+            tags: [ 'dev' ]
+            configuration:
+              schemaRegistryUrls:
+                value: [http://demo-kafka-2:8081]
+              metricsType:
+                value: JMX
+              metricsPort:
+                value: 9582
+        connect:
+          - name: dev
+            version: 1
+            tags: [ 'dev' ]
+            configuration:
+              workers:
+                value: [http://demo-kafka-2:8083]
+              aes256Key:
+                value: 0123456789abcdef0123456789abcdef
+              metricsType:
+                value: JMX
+              metricsPort:
+                value: 9584
+      postgres.init.sql: |
+        CREATE DATABASE hq;
+        CREATE DATABASE agent1;
+        CREATE DATABASE agent2;
+    volumes:
+      - lenses-hq-volume:/hq
+      - lenses-agent-volume:/agent
+      - lenses-agent2-volume:/agent2
+      - postgres-volume:/postgres
+
+# Volumes are used to share data between containers.
+# The optional volumes are there to allow persistence.
+volumes:
+  lenses-hq-volume:
+  lenses-agent-volume:
+  lenses-agent2-volume:
+  postgres-volume:
+  # Optional, to allow to resume work (persistence)
+  postgres-data-volume:
+  kafka-data-volume:
+  kafka2-data-volume:
+
+networks:
+  default:
+    name: lenses
